@@ -50,7 +50,7 @@ This script intelligently detects your distribution, system package manager, and
 
 2. Make the scripts executable:
    ```bash
-   chmod +x install.sh uninstall.sh myUpdaterScript.sh
+   chmod +x install.sh uninstall.sh myUpdaterScriptV2.sh
    ```
 
 3. Run the installer:
