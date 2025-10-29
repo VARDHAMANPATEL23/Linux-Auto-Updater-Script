@@ -18,6 +18,7 @@ This script intelligently detects your distribution, system package manager, des
     * `bun`
 * **NVM Aware:** Correctly sources `~/.nvm/nvm.sh` if it exists, ensuring it can find and update Node-managed packages.
 * **Interactive:** Prompts for confirmation before checking for updates and again before applying them.
+* **Responsive:** Includes a text-based spinner animation to show that long-running update tasks are in progress.
 * **Selective:** Allows you to opt-out of updating programming language packages (npm, Yarn, Bun) if you only want to run system updates.
 * **Safe:** Uses `set -e` to exit immediately if any command fails, preventing potential issues.
 
@@ -44,13 +45,13 @@ This project includes an installer that automatically sets up the script and cre
 
 1.  **Clone the repository:**
     ```sh
-    git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git)
-    cd YOUR_REPOSITORY_NAME
+    git clone [https://github.com/VARDHAMANPATEL23/Linux-Auto-Updater-Script.git](https://github.com/VARDHAMANPATEL23/Linux-Auto-Updater-Script.git)
+    cd Linux-Auto-Updater-Script
     ```
 
 2.  **Make the scripts executable:**
     ```sh
-    chmod +x install.sh uninstall.sh
+    chmod +x install.sh uninstall.sh myUpdaterScript.sh
     ```
 
 3.  **Run the installer:**
@@ -65,54 +66,3 @@ That's it! You can now find "System Updater" in your system's application menu.
 To remove the script and its launcher, simply run the uninstaller:
 ```sh
 ./uninstall.sh
-```
-
-## 🚀 Usage
-
-1.  **Clone or Download**
-    ```sh
-    # Clone the repository (Recommended)
-    git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git)
-    cd YOUR_REPOSITORY_NAME
-
-    # Or just download the script
-    curl -O [https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME/main/myUpdaterScript.sh](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME/main/myUpdaterScript.sh)
-    ```
-
-2.  **Make the Script Executable**
-    ```sh
-    chmod +x myUpdaterScript.sh
-    ```
-
-3.  **Run the Script**
-    ```sh
-    ./myUpdaterScript.sh
-    ```
-
-The script will first perform its detection, show you what it found, and then ask for permission to check for updates. If updates are found, it will ask for a final confirmation before applying them.
-
-
-## 🔧 How It Works
-
-1.  **Detection Phase:**
-    * Reads `/etc/os-release` to find the distribution ID.
-    * Selects the appropriate system package manager based on the ID.
-    * Checks for the `snap` command.
-    * Sources `nvm.sh` to initialize the NVM environment.
-    * Checks for `npm`, `yarn`, and `bun` commands.
-
-2.  **Check Phase (Optional):**
-    * Runs the "check" or "list" command for each detected package manager (e.g., `apt list --upgradable`, `snap refresh --list`, `npm outdated -g`).
-    * This phase is read-only and makes no changes.
-
-3.  **Apply Phase (Optional):**
-    * Runs the "upgrade" or "update" command for each detected package manager (e.g., `sudo apt upgrade -y`, `sudo snap refresh`, `npm update -g`).
-    * Prompts the user to optionally skip programming package updates.
-
-## 🤝 Contributing
-
-Contributions are welcome! If you find a bug, have a suggestion, or want to add support for another package manager (like Flatpak or Homebrew), please feel free to open an issue or submit a pull request.
-
-## 📄 License
-
-This project is open-source. Please consider adding a `LICENSE` file (e.g., [MIT License](https://opensource.org/licenses/MIT)).
