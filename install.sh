@@ -33,7 +33,12 @@ cp "$SCRIPT_DIR/$SCRIPT_NAME" "$INSTALL_SCRIPT_DIR/$SCRIPT_NAME"
 chmod +x "$INSTALL_SCRIPT_DIR/$SCRIPT_NAME"
 
 echo "Installing icon to $INSTALL_ICON_DIR"
-cp "$SCRIPT_DIR/$SOURCE_ICON_NAME" "$INSTALL_ICON_DIR/$INSTALLED_ICON_NAME"
+# Check if icon.png exists before copying
+if [ -f "$SCRIPT_DIR/$SOURCE_ICON_NAME" ]; then
+    cp "$SCRIPT_DIR/$SOURCE_ICON_NAME" "$INSTALL_ICON_DIR/$INSTALLED_ICON_NAME"
+else
+    echo "Warning: icon.png not found. Skipping icon installation."
+fi
 
 # 6. Dynamically create the UNIVERSAL .desktop file
 echo "Creating universal .desktop file in $INSTALL_DESKTOP_DIR"

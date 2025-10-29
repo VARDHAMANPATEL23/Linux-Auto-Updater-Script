@@ -4,7 +4,6 @@
 # and various package managers (system, Snap, and programming language specific),
 # then offers to check for and apply system and application updates.
 # Now includes an option to opt out of programming language package updates.
-# Now includes a spinner animation for update tasks.
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -24,7 +23,7 @@ YARN_VERSION="" # To store Yarn version
 
 # --- Helper Functions ---
 
-# Function to display a message box
+# Function to display a message box (simple alternative to alert/confirm)
 display_message() {
     local title="$1"
     local message="$2"
@@ -46,75 +45,30 @@ prompt_for_confirmation() {
     done
 }
 
-# --- NEW: Spinner Function ---
-# $1: The command to run (as a string)
-# $2: The message to display while spinning
-run_with_spinner() {
-    local cmd="$1"
-    local msg="$2"
-    local spinner_chars="/-\|"
-    local i=0
-
-    # Start the spinner animation in the background
-    (
-        while true; do
-            # Use printf for better cursor control
-            printf "\r[${spinner_chars:i++%${#spinner_chars}:1}] $msg"
-            sleep 0.1
-        done
-    ) &
-    SPINNER_PID=$!
-
-    # Trap ensures the spinner is killed if the script exits (e.g., Ctrl+C)
-    trap "kill $SPINNER_PID 2>/dev/null; printf '\r'; exit" SIGINT SIGTERM
-
-    # Run the actual command, redirecting its output to /dev/null
-    # We add `|| true` to prevent `set -e` from exiting on non-zero,
-    # as we want to handle the result ourselves.
-    local cmd_output
-    cmd_output=$(eval "$cmd" 2>&1)
-    local cmd_exit_code=$?
-
-    # Stop the spinner
-    kill $SPINNER_PID 2>/dev/null
-    wait $SPINNER_PID 2>/dev/null # Wait to clean up the process
-
-    # Clear the spinner line
-    printf "\r%-80s\n" " "
-    
-    # Check the command's exit code
-    if [ $cmd_exit_code -eq 0 ]; then
-        printf "✅ $msg ... Done\n"
-    else
-        printf "❌ $msg ... Failed\n"
-        echo "Error details:"
-        echo "$cmd_output"
-    fi
-    
-    # Return the original exit code
-    return $cmd_exit_code
-}
-
 # --- Detection Functions ---
 
 # Function to detect the Linux distribution
 detect_distro() {
     display_message "Detection" "Detecting Linux distribution..."
     if [ -f "/etc/os-release" ]; then
+        # Most modern Linux distributions use /etc/os-release
         source "/etc/os-release"
         DISTRO_NAME="${PRETTY_NAME:-$NAME}"
         DISTRO_ID="${ID}"
         echo "Detected Distribution: ${DISTRO_NAME} (ID: ${DISTRO_ID})"
     elif [ -f "/etc/lsb-release" ]; then
+        # For older Debian/Ubuntu-based systems
         source "/etc/lsb-release"
         DISTRO_NAME="${DISTRIB_DESCRIPTION:-Ubuntu/Debian-based}"
         DISTRO_ID="ubuntu_debian_legacy"
         echo "Detected Distribution: ${DISTRO_NAME}"
     elif [ -f "/etc/redhat-release" ]; then
+        # For RHEL/CentOS/Fedora
         DISTRO_NAME=$(cat /etc/redhat-release)
         DISTRO_ID="redhat_based"
         echo "Detected Distribution: ${DISTRO_NAME}"
     elif [ -f "/etc/debian_version" ]; then
+        # Generic Debian check
         DISTRO_NAME="Debian"
         DISTRO_ID="debian"
         echo "Detected Distribution: Debian"
@@ -152,6 +106,7 @@ detect_package_manager() {
             fi
             ;;
         *)
+            # Fallback for unknown distros: check common package managers
             if command -v apt &> /dev/null; then
                 PACKAGE_MANAGER="apt"
             elif command -v dnf &> /dev/null; then
@@ -167,7 +122,8 @@ detect_package_manager() {
     esac
 
     if [ "$PACKAGE_MANAGER" = "unknown" ]; then
-        echo "Error: Could not detect a supported system package manager."
+        echo "Error: Could not detect a supported system package manager for core system updates."
+        # Do not exit here, as Snap/programming updates might still be possible
     else
         echo "Detected System Package Manager: ${PACKAGE_MANAGER}"
     fi
@@ -181,6 +137,7 @@ detect_desktop_environment() {
     elif [ -n "$DESKTOP_SESSION" ]; then
         DESKTOP_ENVIRONMENT="$DESKTOP_SESSION"
     else
+        # Try to guess based on common processes/executables
         if pgrep -x "gnome-shell" > /dev/null || pgrep -x "gnome-session" > /dev/null; then
             DESKTOP_ENVIRONMENT="GNOME"
         elif pgrep -x "kdeinit5" > /dev/null || pgrep -x "plasmashell" > /dev/null; then
@@ -209,15 +166,19 @@ check_snap() {
     fi
 }
 
-# Function to check for NVM presence
+# Function to check for NVM (Node Version Manager) presence
+# This also sources NVM so npm/yarn commands are available if managed by NVM
 check_nvm() {
-    display_message "Detection" "Checking for NVM (Node Version Manager)..."
+    display_message "Detection" "Checking for NVM (Node Version Manager) presence..."
     if [ -s "$HOME/.nvm/nvm.sh" ]; then
         export NVM_DIR="$HOME/.nvm"
+        # Source nvm.sh to make 'nvm' and nvm-managed node/npm/yarn available in this script's context
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
         if command -v nvm &> /dev/null; then
             HAS_NVM=true
             echo "NVM (Node Version Manager) detected."
+            echo "Note: NVM manages Node.js versions. To update NVM itself, you typically re-run its install script."
+            echo "This script will focus on updating global npm/Yarn packages managed by NVM."
         fi
     fi
     if [ "$HAS_NVM" = false ]; then
@@ -227,7 +188,7 @@ check_nvm() {
 
 # Function to check for npm presence
 check_npm() {
-    display_message "Detection" "Checking for npm..."
+    display_message "Detection" "Checking for npm (Node Package Manager) presence..."
     if command -v npm &> /dev/null; then
         HAS_NPM=true
         echo "npm detected."
@@ -241,7 +202,7 @@ check_npm() {
 
 # Function to check for Yarn presence
 check_yarn() {
-    display_message "Detection" "Checking for Yarn..."
+    display_message "Detection" "Checking for Yarn presence..."
     if command -v yarn &> /dev/null; then
         HAS_YARN=true
         YARN_VERSION=$(yarn --version 2>/dev/null | cut -d'.' -f1)
@@ -256,7 +217,7 @@ check_yarn() {
 
 # Function to check for Bun presence
 check_bun() {
-    display_message "Detection" "Checking for Bun..."
+    display_message "Detection" "Checking for Bun presence..."
     if command -v bun &> /dev/null; then
         HAS_BUN=true
         echo "Bun detected."
@@ -267,7 +228,6 @@ check_bun() {
 
 
 # --- Update Check Functions ---
-# (These functions print output, so we DON'T use a spinner here)
 
 # Function to check for system package updates
 check_system_updates() {
@@ -297,7 +257,7 @@ check_system_updates() {
                 ;;
         esac
     else
-        echo "Skipping system package update check."
+        echo "Skipping system package update check as no supported package manager was detected."
     fi
 }
 
@@ -315,7 +275,10 @@ check_npm_global_updates() {
     if [ "$HAS_NPM" = true ]; then
         echo ""
         echo "Checking for npm global package updates..."
-        npm outdated -g || true
+        # Running without sudo, as global npm packages are often managed by the user or NVM
+        npm outdated -g || true # `|| true` prevents `set -e` from exiting if no outdated packages
+        echo "Note: To update npm itself, the command is 'npm install -g npm@latest'."
+        echo "This will be attempted during the 'Apply Updates' phase."
     fi
 }
 
@@ -325,21 +288,30 @@ check_yarn_global_updates() {
         echo ""
         echo "Checking for Yarn global package updates..."
         if [[ "$YARN_VERSION" -eq 1 ]]; then
-            echo "Using 'yarn global upgrade --json --dry-run' for Yarn Classic (v1)."
+            # For Yarn Classic (v1), 'outdated' subcommand for global packages is not standard/reliable
+            # Use 'yarn global upgrade --json --dry-run' to show what would be upgraded
+            echo "Using 'yarn global upgrade --json --dry-run' for Yarn Classic (v1) update check."
             yarn global upgrade --json --dry-run || true
+            echo "Note: The above output shows packages that *would* be upgraded."
         else
+            # For Yarn Modern (Berry) or future versions, 'yarn outdated' should work
+            # yarn global outdated (or 'yarn outdated --immutable' for Yarn 2+)
+            # However, Yarn 2+ discourages global installs. We'll stick to 'global upgrade --dry-run' for consistency.
             echo "Checking for Yarn global package updates using 'yarn global upgrade --dry-run'..."
             yarn global upgrade --dry-run || true
         fi
+        echo "Note: To update Yarn itself, you might need 'npm install -g yarn' if installed via npm."
     fi
 }
 
-# Function to check for Bun updates
+# Function to check for Bun updates (Bun self-updates)
 check_bun_self_update() {
     if [ "$HAS_BUN" = true ]; then
         echo ""
         echo "Checking for Bun self-update..."
-        bun upgrade --dry-run || true
+        # Bun's upgrade command itself checks for and applies updates
+        bun upgrade --dry-run || true # --dry-run for check, || true to prevent exit on no update
+        echo "Note: 'bun upgrade' updates Bun itself and its internal dependencies."
     fi
 }
 
@@ -360,7 +332,7 @@ check_for_all_updates() {
 }
 
 
-# --- Perform Update Functions (WITH SPINNERS) ---
+# --- Perform Update Functions ---
 
 # Function to perform system package updates
 perform_system_update() {
@@ -368,31 +340,31 @@ perform_system_update() {
         echo "Applying system package updates using ${PACKAGE_MANAGER}..."
         case "$PACKAGE_MANAGER" in
             apt)
-                run_with_spinner "${SUDO_CMD} apt upgrade -y" "Applying apt upgrades"
-                run_with_spinner "${SUDO_CMD} apt autoremove -y" "Cleaning up old packages"
-                run_with_spinner "${SUDO_CMD} apt autoclean -y" "Cleaning up downloaded archives"
+                ${SUDO_CMD} apt upgrade -y
+                ${SUDO_CMD} apt autoremove -y # Clean up old packages
+                ${SUDO_CMD} apt autoclean -y  # Clean up downloaded archives
                 ;;
             dnf)
-                run_with_spinner "${SUDO_CMD} dnf upgrade -y" "Applying dnf upgrades"
-                run_with_spinner "${SUDO_CMD} dnf autoremove -y" "Cleaning up old packages"
+                ${SUDO_CMD} dnf upgrade -y
+                ${SUDO_CMD} dnf autoremove -y
                 ;;
             yum)
-                run_with_spinner "${SUDO_CMD} yum update -y" "Applying yum updates"
-                run_with_spinner "${SUDO_CMD} yum autoremove -y" "Cleaning up old packages"
+                ${SUDO_CMD} yum update -y
+                ${SUDO_CMD} yum autoremove -y
                 ;;
             pacman)
-                run_with_spinner "${SUDO_CMD} pacman -Syu --noconfirm" "Applying pacman updates"
+                ${SUDO_CMD} pacman -Syu --noconfirm
                 ;;
             zypper)
-                run_with_spinner "${SUDO_CMD} zypper update -y" "Applying zypper updates"
-                run_with_spinner "${SUDO_CMD} zypper clean" "Cleaning up zypper cache"
+                ${SUDO_CMD} zypper update -y
+                ${SUDO_CMD} zypper clean
                 ;;
             *)
                 echo "Warning: Unsupported system package manager for performing updates: ${PACKAGE_MANAGER}"
                 ;;
         esac
     else
-        echo "Skipping system package update."
+        echo "Skipping system package update as no supported package manager was detected."
     fi
 }
 
@@ -400,7 +372,8 @@ perform_system_update() {
 perform_snap_update() {
     if [ "$HAS_SNAP" = true ]; then
         echo ""
-        run_with_spinner "${SUDO_CMD} snap refresh" "Applying Snap package updates"
+        echo "Applying Snap package updates..."
+        ${SUDO_CMD} snap refresh
     fi
 }
 
@@ -408,8 +381,13 @@ perform_snap_update() {
 perform_npm_global_update() {
     if [ "$HAS_NPM" = true ]; then
         echo ""
-        run_with_spinner "npm install -g npm@latest" "Updating npm itself" || true
-        run_with_spinner "npm update -g" "Updating other global npm packages" || true
+        echo "Applying npm global package updates..."
+        # Update npm itself first
+        echo "Attempting to update npm itself..."
+        npm install -g npm@latest || true # `|| true` prevents exit on non-zero, allowing subsequent updates
+        echo "Updating other global npm packages..."
+        npm update -g || true
+        echo "Note: Some global npm packages may require 'sudo' if installed system-wide."
     fi
 }
 
@@ -417,10 +395,15 @@ perform_npm_global_update() {
 perform_yarn_global_update() {
     if [ "$HAS_YARN" = true ]; then
         echo ""
+        echo "Applying Yarn global package updates..."
+        # For yarn itself, if it was installed via npm, update it with npm
         if npm list -g yarn &> /dev/null; then
-            run_with_spinner "npm install -g yarn@latest" "Updating Yarn itself (via npm)" || true
+            echo "Attempting to update Yarn itself (if installed via npm)..."
+            npm install -g yarn@latest || true
         fi
-        run_with_spinner "yarn global upgrade" "Applying Yarn global package updates" || true
+        # Perform the actual global upgrade
+        yarn global upgrade || true
+        echo "Note: Some global Yarn packages may require 'sudo' if installed system-wide."
     fi
 }
 
@@ -428,18 +411,20 @@ perform_yarn_global_update() {
 perform_bun_self_update() {
     if [ "$HAS_BUN" = true ]; then
         echo ""
-        run_with_spinner "bun upgrade" "Applying Bun self-update" || true
+        echo "Applying Bun self-update..."
+        bun upgrade || true # Bun's upgrade command updates itself and its internal dependencies
     fi
 }
 
 # Main function to perform all types of updates
 perform_all_updates() {
     echo ""
-    display_message "Update Action" "Performing all requested updates..."
+    display_message "Update Action" "Performing all requested system and application updates..."
 
     perform_system_update
     perform_snap_update
 
+    # Check if any programming package managers were detected before asking
     if [ "$HAS_NPM" = true ] || [ "$HAS_YARN" = true ] || [ "$HAS_BUN" = true ]; then
         echo ""
         if prompt_for_confirmation "Do you want to apply programming package updates (npm, Yarn, Bun)?"; then
@@ -450,7 +435,7 @@ perform_all_updates() {
             display_message "Action Skipped" "Programming package updates skipped by user."
         fi
     else
-        echo "No programming package managers detected, skipping."
+        echo "No programming package managers (npm, Yarn, Bun) detected, skipping their update."
     fi
 
     echo ""
@@ -460,25 +445,27 @@ perform_all_updates() {
 
 # --- Main Script Execution ---
 
+# Check if sudo is available
 if command -v sudo &> /dev/null; then
     SUDO_CMD="sudo"
 else
-    echo "Warning: 'sudo' not found. Some commands may fail."
+    echo "Warning: 'sudo' command not found. Some update commands might require root privileges."
+    echo "Please run this script with 'sudo ./update_system.sh' or ensure you have root permissions."
 fi
 
 echo "--- Starting System Update Script ---"
 
-# Step 1: Detections
+# Step 1: Detect system information and package managers (order matters for NVM)
 detect_distro
 detect_desktop_environment
 check_snap
-check_nvm
-detect_package_manager
-check_npm
-check_yarn
+check_nvm # Check and source NVM first
+detect_package_manager # System package manager
+check_npm # Checks for npm after NVM is sourced
+check_yarn # Checks for Yarn after NVM is sourced
 check_bun
 
-# Step 2: Display info
+# Step 2: Display detected information
 echo ""
 display_message "System Information" "
 Distribution: ${DISTRO_NAME}
@@ -491,12 +478,12 @@ Bun detected: $([ "$HAS_BUN" = true ] && echo "Yes" || echo "No")
 NVM detected: $([ "$HAS_NVM" = true ] && echo "Yes" || echo "No")
 "
 
-# Step 3: Prompt to check
-if prompt_for_confirmation "Do you want to check for all available package updates?"; then
+# Step 3: Prompt to check for updates
+if prompt_for_confirmation "Do you want to check for all available package updates (system, Snap, and programming managers)?"; then
     check_for_all_updates
 
-    # Step 4: Prompt to perform
-    if prompt_for_confirmation "Do you want to apply all available updates?"; then
+    # Step 4: Prompt to perform updates if check was successful
+    if prompt_for_confirmation "Do you want to apply all available updates (system, Snap, and programming managers)?"; then
         perform_all_updates
     else
         display_message "Action Skipped" "Update application skipped by user."
@@ -507,8 +494,3 @@ fi
 
 echo ""
 echo "--- Script Finished ---"
-
-# This keeps the terminal window open
-echo ""
-echo "Script finished. Press any key to close."
-read -n 1 -s -r
