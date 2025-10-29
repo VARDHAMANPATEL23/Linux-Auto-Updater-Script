@@ -7,13 +7,32 @@ set -e
 
 echo "--- System Updater Installer ---"
 
+# --- Helper Function for Choice ---
+prompt_for_shortcut_location() {
+    echo ""
+    echo "Where would you like to add the shortcut?"
+    echo "  1) Application Menu (Recommended)"
+    echo "  2) Desktop"
+    echo "  3) Both"
+    echo ""
+    local choice
+    while true; do
+        read -rp "Enter your choice (1, 2, or 3): " choice
+        case "$choice" in
+            1|2|3 ) echo "$choice"; return 0 ;;
+            * ) echo "Please enter 1, 2, or 3." ;;
+        esac
+    done
+}
+
 # 1. Get the absolute path to the directory this script is in
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 # 2. Define standard installation paths
 INSTALL_SCRIPT_DIR="$HOME/.local/bin"
 INSTALL_ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
-INSTALL_DESKTOP_DIR="$HOME/.local/share/applications"
+APP_MENU_DIR="$HOME/.local/share/applications"
+DESKTOP_DIR="$HOME/Desktop" # <-- New path added
 
 # 3. Define the file names
 SCRIPT_NAME="myUpdaterScript.sh"
@@ -25,7 +44,8 @@ DESKTOP_FILE_NAME="system-updater.desktop"
 echo "Creating directories..."
 mkdir -p "$INSTALL_SCRIPT_DIR"
 mkdir -p "$INSTALL_ICON_DIR"
-mkdir -p "$INSTALL_DESKTOP_DIR"
+mkdir -p "$APP_MENU_DIR"
+mkdir -p "$DESKTOP_DIR" # Ensure Desktop directory exists
 
 # 5. Install the script and icon
 echo "Installing script to $INSTALL_SCRIPT_DIR"
@@ -40,12 +60,9 @@ else
     echo "Warning: icon.png not found. Skipping icon installation."
 fi
 
-# 6. Dynamically create the UNIVERSAL .desktop file
-echo "Creating universal .desktop file in $INSTALL_DESKTOP_DIR"
-
-# --- THIS BLOCK IS UPDATED ---
-cat << EOF > "$INSTALL_DESKTOP_DIR/$DESKTOP_FILE_NAME"
-[Desktop Entry]
+# 6. Define the .desktop file content
+# We store it in a variable to write it to multiple places easily.
+DESKTOP_ENTRY_CONTENT="[Desktop Entry]
 Name=System Updater
 Comment=Check and apply system updates automatically
 Exec=sudo $INSTALL_SCRIPT_DIR/$SCRIPT_NAME
@@ -53,13 +70,36 @@ Icon=$INSTALL_ICON_DIR/$INSTALLED_ICON_NAME
 Terminal=true
 Type=Application
 Categories=System;Utility;
-EOF
-# --- END OF UPDATED BLOCK ---
+"
 
-# 7. Update the application database
-echo "Updating application database..."
-update-desktop-database "$INSTALL_DESKTOP_DIR"
+# 7. Ask user and create shortcut(s)
+USER_CHOICE=$(prompt_for_shortcut_location)
+
+case "$USER_CHOICE" in
+    1)
+        echo "Installing shortcut to Application Menu..."
+        echo "$DESKTOP_ENTRY_CONTENT" > "$APP_MENU_DIR/$DESKTOP_FILE_NAME"
+        echo "Updating application database..."
+        update-desktop-database "$APP_MENU_DIR"
+        ;;
+    2)
+        echo "Installing shortcut to Desktop..."
+        echo "$DESKTOP_ENTRY_CONTENT" > "$DESKTOP_DIR/$DESKTOP_FILE_NAME"
+        chmod +x "$DESKTOP_DIR/$DESKTOP_FILE_NAME" # Make desktop file trusted
+        ;;
+    3)
+        echo "Installing shortcut to Application Menu..."
+        echo "$DESKTOP_ENTRY_CONTENT" > "$APP_MENU_DIR/$DESKTOP_FILE_NAME"
+        echo "Updating application database..."
+        update-desktop-database "$APP_MENU_DIR"
+        
+        echo "Installing shortcut to Desktop..."
+        echo "$DESKTOP_ENTRY_CONTENT" > "$DESKTOP_DIR/$DESKTOP_FILE_NAME"
+        chmod +x "$DESKTOP_DIR/$DESKTOP_FILE_NAME" # Make desktop file trusted
+        ;;
+esac
 
 echo ""
 echo "✅ Installation Complete!"
-echo "You can now find 'System Updater' in your application menu."
+echo "You can now find 'System Updater' in your chosen location(s)."
+
