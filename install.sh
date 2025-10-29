@@ -94,6 +94,16 @@ case "$USER_CHOICE" in
         echo "Installing shortcut to Desktop..."
         echo "$DESKTOP_ENTRY_CONTENT" > "$DESKTOP_DIR/$DESKTOP_FILE_NAME"
         chmod +x "$DESKTOP_DIR/$DESKTOP_FILE_NAME" # Make desktop file trusted
+
+        # --- NEW FIX ---
+        # Mark as trusted using gio (if available)
+        if command -v gio &> /dev/null; then
+            gio set "$DESKTOP_DIR/$DESKTOP_FILE_NAME" metadata::trusted true
+            echo "Marked desktop shortcut as trusted."
+        else
+            echo "Warning: 'gio' command not found."
+            echo "You may need to right-click the desktop icon and select 'Allow Launching'."
+        fi
         ;;
     3)
         echo "Installing shortcut to Application Menu..."
@@ -104,6 +114,16 @@ case "$USER_CHOICE" in
         echo "Installing shortcut to Desktop..."
         echo "$DESKTOP_ENTRY_CONTENT" > "$DESKTOP_DIR/$DESKTOP_FILE_NAME"
         chmod +x "$DESKTOP_DIR/$DESKTOP_FILE_NAME" # Make desktop file trusted
+
+        # --- NEW FIX ---
+        # Mark as trusted using gio (if available)
+        if command -v gio &> /dev/null; then
+            gio set "$DESKTOP_DIR/$DESKTOP_FILE_NAME" metadata::trusted true
+            echo "Marked desktop shortcut as trusted."
+        else
+            echo "Warning: 'gio' command not found."
+            echo "You may need to right-click the desktop icon and select 'Allow Launching'."
+        fi
         ;;
 esac
 
