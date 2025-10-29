@@ -1,4 +1,4 @@
-# Linux System & App Updater Script
+# 🐧 Linux System & App Updater Script
 
 A comprehensive Bash script designed to automate the process of checking for and applying updates on a Linux system.
 
@@ -6,98 +6,99 @@ This script intelligently detects your distribution, system package manager, and
 
 ## ✨ Key Features
 
-- **Smart Detection**: Automatically discovers your Linux distribution (Ubuntu, Fedora, Arch, openSUSE, etc.) and the correct system package manager (apt, dnf, pacman, zypper, etc.)
-- **Comprehensive Updates**: Handles updates for system packages and app packages
-- **Developer-Friendly**: Detects and offers to update a wide range of programming toolchains
-- **Interactive**: Prompts for confirmation before checking and applying updates
-- **Responsive**: Includes a text-based spinner animation for long-running update tasks
-- **Selective**: Allows opting out of programming toolchain updates
-- **Safe**: Uses `set -e` to exit immediately if any command fails
+- **🧠 Smart Detection:** Automatically discovers your Linux distribution (Ubuntu, Fedora, Arch, openSUSE, etc.) and the correct system package manager (`apt`, `dnf`, `pacman`, `zypper`, etc.)
+- **🔄 Comprehensive Updates:** Handles updates for:
+  - System packages (via `apt`, `dnf`, etc.)
+  - App packages (Snap, Flatpak, Homebrew)
+- **💻 Developer-Friendly:** Detects and offers to update a wide range of programming toolchains
+- **🔧 Flexible Installation:** The installer lets you add the shortcut to your Application Menu, Desktop, or both
+- **✅ Fixes "Untrusted" Error:** Automatically marks the desktop shortcut as trusted, bypassing the "Allow Launching" security prompt
+- **👆 Interactive:** Prompts for confirmation before checking for updates and again before applying them
+- **⏳ Responsive:** Includes a text-based spinner animation to show that long-running update tasks are in progress
+- **🤔 Selective:** Allows you to opt-out of updating programming toolchains if you only want to run system/app updates
+- **🛡️ Safe:** Uses `set -e` to exit immediately if any command fails
 
 ## 💻 Supported Software
 
-### System Package Managers
-- apt (Debian, Ubuntu, Mint)
-- dnf (Fedora, RHEL)
-- yum (CentOS, older RHEL)
-- pacman (Arch, Manjaro)
-- zypper (openSUSE)
+This script actively detects and supports updates for the following:
 
-### Application Package Managers
-- snap
-- flatpak
-- brew (Homebrew)
+### 📦 System Package Managers
+- `apt` (Debian, Ubuntu, Mint)
+- `dnf` (Fedora, RHEL)
+- `yum` (CentOS, older RHEL)
+- `pacman` (Arch, Manjaro)
+- `zypper` (openSUSE)
 
-### Programming Language Managers
-- npm (global packages)
-- yarn (global packages)
-- bun (self-update)
-- rustup (Rust toolchain)
-- pip (Python package manager)
-- pipx (Python application installer)
-- gem (RubyGems)
-- asdf (Multi-language version manager)
+### 🛍️ Application Package Managers
+- `snap`
+- `flatpak`
+- `brew` (Homebrew)
 
-## 🚀 Installation
+### 🛠️ Programming Language Managers
+- `npm` (global packages)
+- `yarn` (global packages)
+- `bun` (self-update)
+- `rustup` (Rust toolchain)
+- `pip` (Python package manager)
+- `pipx` (Python application installer)
+- `gem` (RubyGems)
+- `asdf` (Multi-language version manager)
 
-### Easy Setup
+## 🚀 Installation (Easy Setup)
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/VARDHAMANPATEL23/Linux-Auto-Updater-Script.git
-   cd Linux-Auto-Updater-Script
-   ```
+This project includes an installer that automatically sets up the script and creates an application launcher for you.
 
-2. Make the scripts executable:
-   ```bash
-   chmod +x install.sh uninstall.sh myUpdaterScriptV2.sh
-   ```
+1. **Clone the repository:**
+```bash
+git clone https://github.com/VARDHAMANPATEL23/Linux-Auto-Updater-Script.git
+cd Linux-Auto-Updater-Script
+```
 
-3. Run the installer:
-   ```bash
-   ./install.sh
-   ```
-   **Note**: Make sure to add your `icon.png` to the project directory before installation.
+*(Note: You will also need to add your `icon.png` to this directory for the shortcut icon to work.)*
 
-That's it! You can now find "System Updater" in your system's application menu.
+2. **Make the scripts executable:**
+```bash
+chmod +x install.sh uninstall.sh myUpdaterScript.sh
+```
 
-### Uninstallation
+3. **Run the installer:**
+```bash
+./install.sh
+```
 
-To remove the script and its launcher:
+4. **Choose your shortcut location:**
+   The script will ask if you want the shortcut in your **Application Menu**, on your **Desktop**, or **Both**.
+
+That's it! The launcher is now in your chosen location.
+
+### 🗑️ Uninstallation
+
+To remove the script and its launcher from all locations, simply run the uninstaller:
 ```bash
 ./uninstall.sh
 ```
 
+## ⚙️ How It Works
+
+1. **Detection Phase:**
+   - Reads `/etc/os-release` to find the distribution ID
+   - Selects the appropriate system package manager
+   - Sources common environments like NVM, asdf, and Cargo
+   - Checks for all other supported package managers
+
+2. **Check Phase (Optional):**
+   - Runs the "check" or "list" command for each detected package manager (e.g., `apt list --upgradable`, `flatpak remote-ls --updates`, `npm outdated -g`)
+   - This phase is read-only and makes no changes
+
+3. **Apply Phase (Optional):**
+   - Runs the "upgrade" or "update" command for each detected package manager (e.g., `sudo apt upgrade -y`, `flatpak update -y`, `npm update -g`)
+   - Shows a spinner animation while tasks are running
+   - Prompts the user to optionally skip programming toolchain updates
+
 ## 🤝 Contributing
 
-Contributions are welcome! If you find a bug or have a suggestion, please feel free to:
-- Open an issue
-- Submit a pull request
+Contributions are welcome! If you find a bug or have a suggestion, please feel free to open an issue or submit a pull request.
 
 ## 📄 License
 
-This project is open-source under the MIT License.
-
-```text
-MIT License
-
-Copyright (c) 2025 Vardhaman Patel
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+This project is open-source. Please consider adding a `LICENSE` file (e.g., [MIT License](https://opensource.org/licenses/MIT)).
