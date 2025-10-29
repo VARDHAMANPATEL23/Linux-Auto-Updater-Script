@@ -9,18 +9,26 @@ echo "--- System Updater Installer ---"
 
 # --- Helper Function for Choice ---
 prompt_for_shortcut_location() {
-    echo ""
-    echo "Where would you like to add the shortcut?"
-    echo "  1) Application Menu (Recommended)"
-    echo "  2) Desktop"
-    echo "  3) Both"
-    echo ""
+    # --- MODIFIED LINES ---
+    # We redirect the menu text to standard error (stderr)
+    # so it prints to the terminal instead of being captured by the variable.
+    echo "" >&2
+    echo "Where would you like to add the shortcut?" >&2
+    echo "  1) Application Menu (Recommended)" >&2
+    echo "  2) Desktop" >&2
+    echo "  3) Both" >&2
+    echo "" >&2
+    # --- END OF MODIFIED LINES ---
+    
     local choice
     while true; do
+        # 'read -rp' already prints its prompt to stderr, so it's fine
         read -rp "Enter your choice (1, 2, or 3): " choice
         case "$choice" in
+            # This echo goes to stdout, which is what we want to capture
             1|2|3 ) echo "$choice"; return 0 ;;
-            * ) echo "Please enter 1, 2, or 3." ;;
+            # Error messages should also go to stderr
+            * ) echo "Please enter 1, 2, or 3." >&2 ;;
         esac
     done
 }
@@ -102,4 +110,3 @@ esac
 echo ""
 echo "✅ Installation Complete!"
 echo "You can now find 'System Updater' in your chosen location(s)."
-
