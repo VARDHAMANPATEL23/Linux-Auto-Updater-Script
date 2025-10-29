@@ -38,6 +38,35 @@ This script actively detects and supports updates for the following:
     * `yarn` (global packages)
     * `bun` (self-update)
 
+## 🚀 Installation (Easy Setup)
+
+This project includes an installer that automatically sets up the script and creates an application launcher for you.
+
+1.  **Clone the repository:**
+    ```sh
+    git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git)
+    cd YOUR_REPOSITORY_NAME
+    ```
+
+2.  **Make the scripts executable:**
+    ```sh
+    chmod +x install.sh uninstall.sh
+    ```
+
+3.  **Run the installer:**
+    ```sh
+    ./install.sh
+    ```
+
+That's it! You can now find "System Updater" in your system's application menu.
+
+### Uninstallation
+
+To remove the script and its launcher, simply run the uninstaller:
+```sh
+./uninstall.sh
+```
+
 ## 🚀 Usage
 
 1.  **Clone or Download**
